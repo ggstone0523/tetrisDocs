@@ -1,0 +1,35 @@
+classDiagram
+    Engine <|-- MultiEngine
+    Engine <|-- SoloEngine
+    Engine o-- Setting
+    class Engine {
+        #Setting* setting
+        #IInputHandler* input_handler
+        #IRenderer* renderer
+        #INetwork* network
+        #Lobby* lobby
+        +Engine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer, INetwork* network, Lobby* lobby)
+        +run(bool is_server)*
+        +stop()*
+        +finish() int*
+    }
+    class MultiEngine{
+      +MultiEngine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer, INetwork* network, Lobby* lobby)
+      +run(bool is_server)
+      +stop()
+      +finish() int
+    }
+    class SoloEngine{
+      +SoloEngine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer)
+      +run(bool is_server)
+      +stop()
+      +finish() int
+    }
+    class Setting{
+        +uint8_t color_theme
+        +bool shadow_on;
+        +std::string nick_name;
+        +std::string server_ip_address;
+        +std::string server_port;
+        +set(const std::string& key, const std::string& value)
+    }
