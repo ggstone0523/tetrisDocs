@@ -1,0 +1,451 @@
+title 엔진 유즈케이스 1번
+
+actor "사용자" as user
+participant "engine : Engine" as engine
+participant "input_handler : IInputHandler" as input_handler
+participant "key_mapper : KeyMapper" as key_mapper
+participant "rule : GameRule" as rule
+participant "renderer : IRenderer" as renderer
+participant "platform_renderer : IPlatformRenderer" as platform_renderer
+participant "color_picker : ColorPicker" as color_picker
+participant "theme : Theme" as theme
+participant "shadow_maker : ShadowMaker" as shadow_maker
+participant "setting : Setting" as setting
+participant "board : Board" as board
+participant "active_mino : Tetromino" as active_mino
+participant "action : ActionResolver" as action_resolver
+
+activate engine
+
+user->engine:사용자가 d 키나 오른쪽 화살표 키를 누른다
+
+engine->input_handler:scan()
+activate input_handler
+input_handler-->engine:key
+deactivate input_handler
+
+engine->key_mapper:map_key(key)
+activate key_mapper
+key_mapper-->engine:action
+deactivate key_mapper
+
+engine->rule:process(action)
+activate rule
+
+rule->board:get_active_mino_pos()
+activate board
+board->active_mino:get_pos()
+activate active_mino
+active_mino-->board:curr_r, curr_c
+deactivate active_mino
+board-->rule:curr_r, curr_c
+deactivate board
+
+rule->board:get_active_mino_rotation()
+activate board
+board->active_mino:get_rotation()
+activate active_mino
+active_mino-->board:curr_rot
+deactivate active_mino
+board-->rule:curr_rot
+deactivate board
+
+rule->board:get_active_mino_type()
+activate board
+board->active_mino:get_mino_type()
+activate active_mino
+active_mino-->board:mino_type
+deactivate active_mino
+board-->rule:mino_type
+deactivate board
+
+rule->action_resolver:resolve_move(curr_r, curr_c, curr_rot, user_input)
+activate action_resolver
+action_resolver-->rule:new_r, new_c, new_rot
+deactivate action_resolver
+
+rule->board:move_active_mino(new_r, new_c, new_rot, MoveOption::DISMISS_IF_FAIL)
+activate board
+
+board->board:can_move_mino(new_r, new_c, new_rot)
+activate board
+board->active_mino:get_shape(new_rot)
+activate active_mino
+active_mino-->board:m
+deactivate active_mino
+loop r, c < MINO_SIZE AND (boolean = FALSE || m[r][c] = 0)
+board->board: r = r + 1, c = c + 1
+board->board:is_filled(new_r + r, new_c + c)
+activate board
+board<<--board:boolean
+deactivate board
+end
+board<<--board:boolean
+deactivate board
+
+opt boolean = TRUE
+board->active_mino:set_pos(new_r, new_c)
+board->active_mino:set_rotation(new_rot)
+end
+
+board-->rule:boolean
+deactivate board
+deactivate rule
+
+engine->board:get_active_mino()
+activate board
+board-->engine:active_mino
+deactivate board
+
+engine->renderer:render_board(board, active_mino)
+activate renderer
+
+renderer->board:get_board()
+activate board
+board-->renderer:game_board
+deactivate board
+
+renderer->active_mino:get_pos()
+activate active_mino
+active_mino-->renderer:pos_r, pos_c
+deactivate active_mino
+
+renderer->active_mino:get_shape()
+activate active_mino
+active_mino-->renderer:shape
+deactivate active_mino
+
+renderer->setting:shadow_on
+setting-->renderer:boolean
+
+opt boolean = TRUE
+renderer->shadow_maker:get_shadow_pos(board, active_mino)
+activate shadow_maker
+
+shadow_maker->active_mino:get_pos()
+activate active_mino
+active_mino-->shadow_maker:r
+deactivate active_mino
+
+shadow_maker->active_mino:get_pos()
+activate active_mino
+active_mino-->shadow_maker:c
+deactivate active_mino
+
+shadow_maker->board:get_board()
+activate board
+board-->shadow_maker:board2D
+deactivate board
+
+shadow_maker->active_mino:get_mino_type()
+activate active_mino
+active_mino-->shadow_maker:mino
+deactivate active_mino
+
+loop boolean = false
+shadow_maker->shadow_maker:is_collide(board2D, tetromino, {c, \+\+r})
+activate shadow_maker
+loop (i,j < MINO_SIZE) AND ((m[i][j] = 0) OR ((0 <= board_r < BOARD_ROW) AND ((0 <= board_c < BOARD_COL) AND (board[board_r][board_c] = 8)))
+shadow_maker->shadow_maker: i = i + 1
+shadow_maker->shadow_maker: j = j + 1
+shadow_maker->active_mino:get_shape()
+activate active_mino
+active_mino-->shadow_maker:m
+deactivate active_mino
+opt m[i][j] != 0
+shadow_maker->shadow_maker: board_r = pos.y + i
+shadow_maker->shadow_maker: board_c = pos.x + j
+end
+end
+shadow_maker<<--shadow_maker: boolean
+deactivate shadow_maker
+end
+
+shadow_maker->active_mino:get_pos()
+activate active_mino
+active_mino-->shadow_maker:pos
+deactivate active_mino
+
+shadow_maker->shadow_maker:delta = r - pos.first - 1
+
+shadow_maker->shadow_maker:get_mino_pos(active_mino)
+activate shadow_maker
+loop i, j < MINO_SIZE
+shadow_maker->shadow_maker: i = i + 1
+shadow_maker->shadow_maker: j = j + 1
+shadow_maker->active_mino:get_shape()
+activate active_mino
+active_mino-->shadow_maker:m
+deactivate active_mino
+opt m[i][j] != 0
+
+shadow_maker->active_mino: get_pos()
+activate active_mino
+active_mino-->shadow_maker: first_pos
+deactivate active_mino
+
+shadow_maker->active_mino: get_pos()
+activate active_mino
+active_mino-->shadow_maker: second_pos
+deactivate active_mino
+
+shadow_maker->shadow_maker:ret.push_back({first_pos.second + j, second_pos.first + i})
+
+end
+end
+shadow_maker<<--shadow_maker: base_position
+deactivate shadow_maker
+
+loop for(auto& p : base_position)
+shadow_maker->shadow_maker:shadows.push_back({p.x, p.y + delta});
+end
+
+shadow_maker-->renderer: shadows
+deactivate shadow_maker
+
+loop r < 22
+renderer->renderer:r = r + 1
+renderer->platform_renderer:set_cursor(BOARD_X, BOARD_Y + (r - 1))
+
+loop c < 10
+renderer->renderer:c = c + 1
+
+renderer->renderer:inside_box =  (r >= pos_r && r < pos_r + 4) && (c >= pos_c && c < pos_c + 4)
+
+opt inside_box = TRUE AND shape[r - pos_r][c - pos_c] != 0
+renderer->renderer:is_falling_block = true
+end
+
+renderer->setting:shadow_on
+setting-->renderer:shadow_on
+
+renderer->shadow_maker:is_shadow(shadows, {c, r})
+activate shadow_maker
+shadow_maker-->renderer:is_shadow_bool
+deactivate shadow_maker
+
+alt is_falling_block = TRUE
+
+renderer->color_picker:get_color_key(active_mino)
+activate color_picker
+color_picker->active_mino:get_mino_type()
+activate active_mino
+active_mino-->color_picker:type
+deactivate active_mino
+color_picker->color_picker:get_color_key(type)
+activate color_picker
+color_picker<<--color_picker: color
+deactivate color_picker
+color_picker->renderer:color
+deactivate color_picker
+
+renderer->platform_renderer:print_s("██", color)
+activate platform_renderer
+
+platform_renderer->platform_renderer:get_color(color)
+activate platform_renderer
+platform_renderer->theme:color(color)
+activate theme
+theme->theme:it = colors.find(color)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string1
+deactivate theme
+theme-->platform_renderer:string1
+deactivate theme
+platform_renderer<<--platform_renderer:string1
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND, true)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND, true)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, true)
+activate theme
+theme<<--theme:string2
+deactivate theme
+theme-->platform_renderer:string2
+deactivate theme
+platform_renderer<<--platform_renderer:string2
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string3
+deactivate theme
+theme-->platform_renderer:string3
+deactivate theme
+platform_renderer<<--platform_renderer:string3
+deactivate platform_renderer
+
+deactivateafter platform_renderer
+
+else game_board[r][c] < 8 && game_board[r][c] > -1
+
+renderer->color_picker:get_color_key(game_board[r][c])
+activate color_picker
+color_picker-->renderer:color
+deactivate color_picker
+
+renderer->platform_renderer:print_s("██", color)
+activate platform_renderer
+
+platform_renderer->platform_renderer:get_color(color)
+activate platform_renderer
+platform_renderer->theme:color(color)
+activate theme
+theme->theme:it = colors.find(color)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string1
+deactivate theme
+theme-->platform_renderer:string1
+deactivate theme
+platform_renderer<<--platform_renderer:string1
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND, true)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND, true)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, true)
+activate theme
+theme<<--theme:string2
+deactivate theme
+theme-->platform_renderer:string2
+deactivate theme
+platform_renderer<<--platform_renderer:string2
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string3
+deactivate theme
+theme-->platform_renderer:string3
+deactivate theme
+platform_renderer<<--platform_renderer:string3
+deactivate platform_renderer
+
+deactivateafter platform_renderer
+
+else shadow_on = TRUE AND is_shadow_bool = TRUE
+
+renderer->platform_renderer:print_s("██", Color::COMMENT)
+activate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::COMMENT)
+activate platform_renderer
+platform_renderer->theme:color(Color::COMMENT)
+activate theme
+theme->theme:it = colors.find(Color::COMMENT)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string1
+deactivate theme
+theme-->platform_renderer:string1
+deactivate theme
+platform_renderer<<--platform_renderer:string1
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND, true)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND, true)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, true)
+activate theme
+theme<<--theme:string2
+deactivate theme
+theme-->platform_renderer:string2
+deactivate theme
+platform_renderer<<--platform_renderer:string2
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string3
+deactivate theme
+theme-->platform_renderer:string3
+deactivate theme
+platform_renderer<<--platform_renderer:string3
+deactivate platform_renderer
+
+deactivateafter platform_renderer
+
+else
+
+renderer->platform_renderer:print_s("██", Color::BACKGROUND)
+activate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string1
+deactivate theme
+theme-->platform_renderer:string1
+deactivate theme
+platform_renderer<<--platform_renderer:string1
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND, true)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND, true)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, true)
+activate theme
+theme<<--theme:string2
+deactivate theme
+theme-->platform_renderer:string2
+deactivate theme
+platform_renderer<<--platform_renderer:string2
+deactivate platform_renderer
+
+platform_renderer->platform_renderer:get_color(Color::BACKGROUND)
+activate platform_renderer
+platform_renderer->theme:color(Color::BACKGROUND)
+activate theme
+theme->theme:it = colors.find(Color::BACKGROUND)
+theme->theme:to_ansi(it->second, false)
+activate theme
+theme<<--theme:string3
+deactivate theme
+theme-->platform_renderer:string3
+deactivate theme
+platform_renderer<<--platform_renderer:string3
+deactivate platform_renderer
+
+deactivateafter platform_renderer
+
+end
+
+end
+
+end
+
+end
+
+end
+
+deactivate renderer
