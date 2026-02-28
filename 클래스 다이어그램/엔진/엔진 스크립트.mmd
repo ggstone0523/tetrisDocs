@@ -1,0 +1,241 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    class Engine {
+	    +Engine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer, INetwork* network, Lobby* lobby)
+	    +run(bool is_server)*
+	    +stop()*
+	    +finish() int*
+	    +~Engine()
+    }
+
+    class MultiEngine {
+	    +MultiEngine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer, INetwork* network, Lobby* lobby)
+	    +~MultiEngine()
+    }
+
+    class SoloEngine {
+	    +SoloEngine(Setting* setting, IInputHandler* input_handler, IRenderer* renderer)
+	    +~SoloEngine()
+    }
+
+    class Setting {
+	    +uint8_t color_theme
+	    +bool shadow_on;
+	    +std::string nick_name;
+	    +std::string server_ip_address;
+	    +std::string server_port;
+	    +set(const std::string& key, const std::string& value)
+    }
+
+    class Lobby {
+	    +Lobby(ILobbyNetwork* lobby_network, ILobbyRenderer* lobby_renderer, ILobbyInputHandler* lobby_input_handler)
+	    +start() bool
+	    +finish()
+	    +get_client_ip_address(std::string key) const charﬂ°°42¶ß
+	    +get_client_ids_ips() std::vector&lt;std::pair&lt;std::string, std::string&gt;&gt;
+	    +get_ids(bool is_server) std::unordered_map
+	    +get_server_ip_address() const charﬂ°°42¶ß
+	    +get_my_id() const charﬂ°°42¶ß
+    }
+
+    class IInputHandler {
+	    +scan() int*
+	    +~IInputHandler()*
+    }
+
+    class INetwork {
+	    +send_udp(const Board& board, const Tetromino& tetromino, int deleted_line, int is_game_over, int is_win, const char* another_user_ip, const char* my_id)*
+	    +send_multi_udp(const Board& board, const Tetromino& tetromino, int deleted_line, int is_game_over, int is_win, const char* my_id, std::vector&lt;std::pair&lt;std::string, std::string&gt;&gt; ids_ips)*
+	    +send_relay_udp(const Packet& packet, std::vector&lt;std::pair&lt;std::string, std::string&gt;&gt; ids_ips)*
+	    +recv_udp(Packet& recv_pkt) bool*
+	    +~INetwork()*
+    }
+
+    class IRenderer {
+	    +render_background()*
+	    +render_board(const Board& board, const Tetromino& tetromino)*
+	    +render_timer(int sec)*
+	    +render_next_block(const int* tetrominoArray)*
+	    +render_hold(const Tetromino& tetromino)*
+	    +render_score(int score)*
+	    +render_other_board(Packet& pkt)*
+	    +render_game_over()*
+	    +render_other_game_over(Packet& pkt)*
+	    +render_win()*
+	    +render_other_win(Packet& pkt)*
+	    +render_level(int level)*
+	    +render_clear()*
+	    +~IRenderer()*
+    }
+
+    class LinuxInput {
+	    +get_line() std::string
+    }
+
+    class WindowInput {
+	    +get_line() std::string
+	    +~WindowInput()
+    }
+
+    class LinuxNetwork {
+	    +LinuxNetwork()
+	    +~LinuxNetwork()
+    }
+
+    class WindowNetwork {
+	    +WindowNetwork()
+	    +~WindowNetwork()
+    }
+
+    class WindowMultiRenderer {
+	    +WindowMultiRenderer(Setting*, IPlatformRenderer*, ColorPicker, TextRenderer, BoxRenderer, BlockRenderer, ShadowMaker)
+	    +~WindowMultiRenderer()*
+    }
+
+    class WindowRenderer {
+	    +WindowRenderer(Setting*, IPlatformRenderer*, ColorPicker, TextRenderer, BoxRenderer, BlockRenderer, ShadowMaker)
+	    +WindowRenderer()
+	    +~WindowRenderer()*
+    }
+
+    class LinuxMultiRenderer {
+	    +LinuxMultiRenderer(Setting*, IPlatformRenderer*, ColorPicker, TextRenderer, BoxRenderer, BlockRenderer, ShadowMaker)
+	    +~LinuxMultiRenderer()*
+    }
+
+    class LinuxRenderer {
+	    +LinuxRenderer(Setting*, IPlatformRenderer*, ColorPicker, TextRenderer, BoxRenderer, BlockRenderer, ShadowMaker)
+	    +LinuxRenderer()
+	    +~LinuxRenderer()
+    }
+
+    class BlockRenderer {
+        +BlockRenderer(IPlatformRenderer*, ColorPicker)
+        +render_mino_pattern(Pos, const Tetromino&, bool transparent = false)
+        +render_mino_pattern(Pos, const Tetromino&, Color, bool transparent = false)
+        +render_mino_pattern(Pos pos, const Tetromino& tetromino, Color mino_color, Color background_color, bool transparent = false)   
+    }
+
+    class ColorPicker {
+        +ColorPicker()
+        +get_random_color() Color
+        +get_block_color(int type) std::string
+        +get_block_color(const Tetromino& tetromino) std::string
+        +get_color_key(const Tetromino& tetromino) Color
+        +get_color_key(int type) Color
+    }
+
+    class TextRenderer {
+        +TextRenderer(IPlatformRenderer*, ColorPicker)
+        +print_big_char(Pos, char, Color)
+        +print_big_char(Pos, char, Color foreground, Color background)
+        +print_big_char(Pos, char)
+        +print_big_string(Pos, std::string&, Color)
+        +print_big_string(Pos, std::string&, Color foreground, Color background)
+        +print_big_string(Pos, std::string&)
+        +print_big_string(Pos pos, const char* str, Color key)
+        +print_big_string(Pos, const char*)
+        +print_small_string(Pos, std::string&, Color)
+        +print_small_string(Pos, std::string&)
+        +print_small_string(Pos pos, const char* str)
+        +draw_game_start_count(Pos pos, int count)
+        +draw_game_over(Pos pos)
+        +draw_logo(Pos pos)
+    }
+
+    class BoxRenderer {
+        +BoxRenderer(IPlatformRenderer*)
+        +draw_box(Pos pos, int w, int h, const std::string& title, Color title_color, Color box_color)
+        +draw_rect(Pos pos, int w, int h, Color color)
+        +draw_line(Pos pos, int w, int h, Color color)
+    }
+
+    class ShadowMaker {
+        +get_shadow_pos(const Board& board, const Tetromino& tetromino) std::vector&lt;Pos&gt;
+        +is_shadow(std::vector&lt;Pos&gt;, Pos) bool
+    }
+
+    class IPlatformRenderer {
+        +clear()*
+        +show_cursor()*
+        +hide_cursor()*
+        +set_cursor(Pos)*
+        +set_cursor(int x, int y)*
+        +set_color(Color)*
+        +set_color(Color foreground, Color background)*
+        +print_s(const char* const, Color)*
+        +print_s(const char* const, Color foreground, Color background)*
+        +print_s(std::string, Color)*
+        +print_s(std::string s, Color foreground, Color background)*
+        +print_s(std::string)*
+    }
+
+	<<interface>> IInputHandler
+	<<interface>> INetwork
+	<<interface>> IRenderer
+    <<interface>> IPlatformRenderer
+
+    Engine <|-- MultiEngine
+    Engine <|-- SoloEngine
+    Engine o-- Setting
+    Engine o-- Lobby
+    Engine o-- IInputHandler
+    Engine o-- INetwork
+    Engine o-- IRenderer
+
+    IInputHandler <|-- LinuxInput
+    IInputHandler <|-- WindowInput
+    
+    INetwork <|-- LinuxNetwork
+    INetwork <|-- WindowNetwork
+    
+    IRenderer <|-- WindowMultiRenderer
+    IRenderer <|-- WindowRenderer
+    IRenderer <|-- LinuxMultiRenderer
+    IRenderer <|-- LinuxRenderer
+    
+    IPlatformRenderer <|-- ConsoleRenderer 
+
+    WindowMultiRenderer o-- Setting
+    WindowMultiRenderer o-- IPlatformRenderer
+    WindowMultiRenderer o-- ColorPicker
+    WindowMultiRenderer o-- TextRenderer
+    WindowMultiRenderer o-- BoxRenderer
+    WindowMultiRenderer o-- BlockRenderer
+    WindowMultiRenderer o-- ShadowMaker
+
+    WindowRenderer o-- Setting
+    WindowRenderer o-- IPlatformRenderer
+    WindowRenderer o-- ColorPicker
+    WindowRenderer o-- TextRenderer
+    WindowRenderer o-- BoxRenderer
+    WindowRenderer o-- BlockRenderer
+    WindowRenderer o-- ShadowMaker
+
+    LinuxMultiRenderer o-- Setting
+    LinuxMultiRenderer o-- IPlatformRenderer
+    LinuxMultiRenderer o-- ColorPicker
+    LinuxMultiRenderer o-- TextRenderer
+    LinuxMultiRenderer o-- BoxRenderer
+    LinuxMultiRenderer o-- BlockRenderer
+    LinuxMultiRenderer o-- ShadowMaker
+
+    LinuxRenderer o-- Setting
+    LinuxRenderer o-- IPlatformRenderer
+    LinuxRenderer o-- ColorPicker
+    LinuxRenderer o-- TextRenderer
+    LinuxRenderer o-- BoxRenderer
+    LinuxRenderer o-- BlockRenderer
+    LinuxRenderer o-- ShadowMaker
+
+    BlockRenderer o-- IPlatformRenderer
+    BlockRenderer o-- ColorPicker
+
+    TextRenderer o-- IPlatformRenderer
+    TextRenderer o-- ColorPicker
+
+    BoxRenderer o-- IPlatformRenderer
