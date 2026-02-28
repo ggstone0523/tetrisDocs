@@ -20,6 +20,15 @@ direction TB
         +~IMenuInputHandler()*
     }
 
+    class LinuxInput {
+        +get_line() std::string
+    }
+
+    class WindowInput {
+        +get_line() std::string
+        +~WindowInput()
+    }
+
     class MenuRenderer {
         +MenuRenderer(IPlatformRenderer*, TextRenderer, BlockRenderer)
     }
