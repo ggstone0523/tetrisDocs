@@ -1,0 +1,144 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    class SettingManager {
+        +SettingManager(Setting*, ISettingRenderer*, ISettingInputHandler*, SettingStorage*)
+        +reload()
+        +update() AppState
+    }
+
+    class Setting {
+        +Setting()
+        +uint8_t color_theme
+        +bool shadow_on
+        +std::string nick_name
+        +std::string server_ip_address
+        +std::string server_port
+        +void set(const std::string& key, const std::string& value)
+    }
+
+    class SettingStorage {
+        +getInstance() static SettingStorage& 
+        +initialize(const std::string& fname)
+        +load() Setting
+        +save(const Setting&)
+    }
+
+    class ISettingInputHandler {
+        +scan() int*
+        +get_line() std::string*
+        +~ISettingInputHandler() *
+    }
+
+    class WindowInput {
+        +~WindowInput
+    }
+
+    class ISettingRenderer {
+        +render_settings_frame()*
+        +render_settings(SettingTitle)*
+        +render_input_window(Pos, std::string&&)*
+        +render_side()*
+        +render_shadow()*
+    }
+
+    class SettingRenderer {
+        +SettingRenderer(Setting*, IPlatformRenderer*, TextRenderer, BlockRenderer, InputWindowRenderer)
+    }
+
+    class InputWindowRenderer {
+        +InputWindowRenderer(IPlatformRenderer*, BoxRenderer)
+        +render_input_window(Pos, std::string)
+    }
+
+    class BlockRenderer {
+        +BlockRenderer(IPlatformRenderer*, ColorPicker)
+        +render_mino_pattern(Pos, const Tetromino&, bool transparent = false)
+        +render_mino_pattern(Pos, const Tetromino&, Color, bool transparent = false)
+        +render_mino_pattern(Pos pos, const Tetromino& tetromino, Color mino_color, Color background_color, bool transparent = false)   
+    }
+
+    class ColorPicker {
+        +ColorPicker()
+        +get_random_color() Color
+        +get_block_color(int type) std::string
+        +get_block_color(const Tetromino& tetromino) std::string
+        +get_color_key(const Tetromino& tetromino) Color
+        +get_color_key(int type) Color
+    }
+
+    class TextRenderer {
+        +TextRenderer(IPlatformRenderer*, ColorPicker)
+        +print_big_char(Pos, char, Color)
+        +print_big_char(Pos, char, Color foreground, Color background)
+        +print_big_char(Pos, char)
+        +print_big_string(Pos, std::string&, Color)
+        +print_big_string(Pos, std::string&, Color foreground, Color background)
+        +print_big_string(Pos, std::string&)
+        +print_big_string(Pos pos, const char* str, Color key)
+        +print_big_string(Pos, const char*)
+        +print_small_string(Pos, std::string&, Color)
+        +print_small_string(Pos, std::string&)
+        +print_small_string(Pos pos, const char* str)
+        +draw_game_start_count(Pos pos, int count)
+        +draw_game_over(Pos pos)
+        +draw_logo(Pos pos)
+    }
+
+    class BoxRenderer {
+        +BoxRenderer(IPlatformRenderer*)
+        +draw_box(Pos pos, int w, int h, const std::string& title, Color title_color, Color box_color)
+        +draw_rect(Pos pos, int w, int h, Color color)
+        +draw_line(Pos pos, int w, int h, Color color)
+    }
+
+    class IPlatformRenderer {
+        +clear()*
+        +show_cursor()*
+        +hide_cursor()*
+        +set_cursor(Pos)*
+        +set_cursor(int x, int y)*
+        +set_color(Color)*
+        +set_color(Color foreground, Color background)*
+        +print_s(const char* const, Color)*
+        +print_s(const char* const, Color foreground, Color background)*
+        +print_s(std::string, Color)*
+        +print_s(std::string s, Color foreground, Color background)*
+        +print_s(std::string)*
+    }
+
+    <<interface>> ISettingInputHandler
+    <<interface>> ISettingRenderer
+    <<interface>> IPlatformRenderer
+
+    SettingManager o-- Setting
+    SettingManager o-- ISettingInputHandler
+    SettingManager o-- ISettingRenderer
+    SettingManager o-- SettingStorage
+
+    ISettingInputHandler <|-- LinuxInput
+    ISettingInputHandler <|-- WindowInput 
+
+    ISettingRenderer <|-- SettingRenderer
+
+    SettingRenderer o-- Setting
+    SettingRenderer o-- IPlatformRenderer
+    SettingRenderer o-- TextRenderer 
+    SettingRenderer o-- BlockRenderer 
+    SettingRenderer o-- InputWindowRenderer 
+
+    InputWindowRenderer o-- IPlatformRenderer
+    InputWindowRenderer o-- BoxRenderer 
+
+    IPlatformRenderer <|-- ConsoleRenderer 
+
+    BlockRenderer o-- IPlatformRenderer
+    BlockRenderer o-- ColorPicker
+
+    TextRenderer o-- IPlatformRenderer
+    TextRenderer o-- ColorPicker
+
+    BoxRenderer o-- IPlatformRenderer
