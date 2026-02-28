@@ -1,0 +1,66 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    RenderFactory o-- Setting
+    RenderFactory o-- IPlatformRenderer
+    RenderFactory o-- ColorPicker
+    RenderFactory o-- ShadowMaker 
+
+    class RenderFactory {
+        +getInstance() RenderFactory&$
+        +initialize(Setting*)
+        +create_input_window_renderer() InputWindowRenderer
+        +create_menu_renderer() MenuRenderer
+        +create_setting_renderer() SettingRenderer
+        +create_linux_renderer() LinuxRenderer
+        +create_linux_multi_renderer() LinuxMultiRenderer
+        +create_text_renderer() TextRenderer
+        +create_box_renderer() BoxRenderer
+        +create_block_renderer() BlockRenderer
+    }
+
+    class Setting {
+        +Setting()
+        +uint8_t color_theme
+        +bool shadow_on
+        +std::string nick_name
+        +std::string server_ip_address
+        +std::string server_port
+        +void set(const std::string& key, const std::string& value)
+    }
+
+    class ColorPicker {
+        +ColorPicker()
+        +get_random_color() Color
+        +get_block_color(int type) std::string
+        +get_block_color(const Tetromino& tetromino) std::string
+        +get_color_key(const Tetromino& tetromino) Color
+        +get_color_key(int type) Color
+    }
+
+    class IPlatformRenderer {
+        +clear()*
+        +show_cursor()*
+        +hide_cursor()*
+        +set_cursor(Pos)*
+        +set_cursor(int x, int y)*
+        +set_color(Color)*
+        +set_color(Color foreground, Color background)*
+        +print_s(const char* const, Color)*
+        +print_s(const char* const, Color foreground, Color background)*
+        +print_s(std::string, Color)*
+        +print_s(std::string s, Color foreground, Color background)*
+        +print_s(std::string)*
+    }
+
+    class ShadowMaker {
+        +get_shadow_pos(const Board& board, const Tetromino& tetromino) std::vector&lt;Pos&gt;
+        +is_shadow(std::vector&lt;Pos&gt;, Pos) bool
+    }
+
+    <<interface>> IPlatformRenderer 
+
+    IPlatformRenderer <|-- ConsoleRenderer 
