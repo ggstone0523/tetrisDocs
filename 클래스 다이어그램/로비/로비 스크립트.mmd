@@ -1,0 +1,78 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    class Lobby {
+	    +Lobby(ILobbyNetwork* lobby_network, ILobbyRenderer* lobby_renderer, ILobbyInputHandler* lobby_input_handler)
+	    +start() bool
+	    +finish()
+	    +get_client_ip_address(std::string key) const charﬂ°°42¶ß
+	    +get_client_ids_ips() std::vector&lt;std::pair&lt;std::string, std::string&gt;&gt;
+	    +get_ids(bool is_server) std::unordered_map
+	    +get_server_ip_address() const charﬂ°°42¶ß
+	    +get_my_id() const charﬂ°°42¶ß
+    }
+
+    class ILobbyInputHandler {
+	    +scan(char* buf, int buf_len, int is_blocking) int*
+	    +scan(int* buf, int is_blocking) int*
+	    +~ILobbyInputHandler()*
+    }
+
+    class ILobbyRenderer {
+	    +render_server_view_room(char* server_id, std::unordered_map&lt;std::string, std::string&gt; client_ip_address)*
+	    +render_user_id_input()*
+	    +render_client_view_room(char* server_id, std::unordered_map&lt;std::string, std::string&gt; client_ip_address)*
+	    +render_view_enter_room(std::unordered_map&lt;std::string, std::string&gt; server_ip_address)*
+	    +render_clear()*
+	    +render_select()*
+	    +~ILobbyRenderer()*
+    }
+
+    class ILobbyNetwork {
+	    +find_broadcast_ip(char* broadcast_ip)*
+	    +send_udp(const char* id, int is_enter, const char* send_ip)*
+	    +recv_udp(user_data& ud, char* ip) bool*
+	    +send_udp(const char* room_master_id, std::unordered_map&lt;std::string, std::string&gt; ids_ips, int id_len, int is_enter_not_success, int is_game_start, int is_broadcast, int is_update, int is_broadcast_delete, const char* send_ip)*
+	    +recv_udp(room_data& rd, char* ip) bool*
+	    +send_multi_udp(const char* room_master_id, std::unordered_map&lt;std::string, std::string&gt; pkt_ids_ips, int id_len, int is_enter_not_success, int is_game_start, int is_broadcast, int is_update, int is_broadcast_delete, std::unordered_map&lt;std::string, std::string&gt; ids_ips)*
+	    +~ILobbyNetwork()*
+    }
+
+    class LinuxLobbyInputHandler {   
+    }
+
+    class WindowLobbyInputHandler {
+    }
+
+    class LinuxLobbyRenderer {
+    }
+
+    class WindowLobbyRenderer {
+    }
+
+    class LinuxLobbyNetwork {
+        +LinuxLobbyNetwork()
+        +~LinuxLobbyNetwork()
+    }
+
+    class WindowLobbyNetwork {
+        +WindowLobbyNetwork()
+        +~WindowLobbyNetwork()
+    }
+
+	<<interface>> ILobbyInputHandler
+	<<interface>> ILobbyRenderer
+	<<interface>> ILobbyNetwork
+
+    Lobby o-- ILobbyNetwork
+    Lobby o-- ILobbyRenderer
+    Lobby o-- ILobbyInputHandler
+    ILobbyInputHandler <|-- LinuxLobbyInputHandler
+    ILobbyInputHandler <|-- WindowLobbyInputHandler
+    ILobbyRenderer <|-- LinuxLobbyRenderer
+    ILobbyRenderer <|-- WindowLobbyRenderer
+    ILobbyNetwork <|-- LinuxLobbyNetwork
+    ILobbyNetwork <|-- WindowLobbyNetwork
