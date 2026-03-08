@@ -1,0 +1,18 @@
+---
+config:
+  layout: elk
+---
+classDiagram
+direction TB
+    IInputFactory <|-- LinuxInputFactory
+    IInputFactory <|-- WindowInputFactory
+
+    class IInputFactory {
+        +create_input_handler() IInputHandler&ast;*
+        +ISettingInputHandler() ISettingInputHandler&ast;*
+        +IMenuInputHandler() IMenuInputHandler&ast;*
+        +ILobbyInputHandler() ILobbyInputHandler&ast;*
+        +~IInputFactory()*
+    }
+
+    <<interface>> IInputFactory 
