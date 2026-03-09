@@ -1,0 +1,105 @@
+title 엔진(솔로)
+
+actor "main" as main
+
+participant ":Engine" as engine
+participant "board:Board" as board
+participant "renderer:IRenderer" as renderer
+participant ":Timer" as timer
+participant ":GameRule" as rule
+participant "input_handler:IInputHandler" as inputhandler
+participant ":KeyMapper" as keymapper
+
+loop is_run_continue IS true
+main->engine:run
+activate engine
+
+engine->board:has_active_mino
+activate board
+board-->>engine:is_mino_active
+deactivate board
+
+opt is_mino_active IS false
+
+engine->board: spawn_mino
+activate board
+board-->>engine: is_spawn_possible
+deactivate board
+
+opt is_spawn_possible IS false
+engine-->>main:is_run_continue = false
+end
+
+engine->renderer:render_next_block
+
+end
+
+engine->timer:set_curr_time
+
+engine->timer:check_500ms_time
+activate timer
+timer-->>engine:is_over_500ms_time
+deactivate timer
+
+opt is_over_500ms_time IS true
+engine->rule:process(DROP)
+engine->renderer:render_board
+engine->renderer:render_hold
+engine->renderer:render_score
+engine->renderer:render_level
+engine->renderer:render_timer
+engine->rule:time_and_level_update
+activate rule
+rule-->>engine:is_level_up
+deactivate rule
+end
+
+engine->inputhandler:scan
+activate inputhandler
+inputhandler-->>engine:key
+deactivate inputhandler
+
+engine->keymapper:map_key(key)
+activate keymapper
+keymapper-->>engine:action
+deactivate keymapper
+
+opt action NOT -1
+engine->rule:process(action)
+engine->renderer:render_next_block
+engine->renderer:render_board
+engine->renderer:render_hold
+end
+
+engine->rule:update_score
+activate rule
+rule-->>engine:new_score
+deactivate rule
+
+opt is_level_up IS true
+
+engine->board:insert_line(3)
+activate board
+board-->>engine:is_insert_line_success
+deactivate board
+
+opt is_insert_line_success IS false
+engine->renderer:render_board
+engine->renderer:render_hold
+engine-->>main:is_run_continue = false
+end
+
+end
+
+opt new_score NOT 0 OR is_level_up IS true 
+engine->renderer:render_board
+engine->renderer:render_hold
+engine->renderer:render_score
+engine->renderer:render_level
+engine->renderer:render_timer
+engine->engine: is_level_up = false
+end
+
+engine-->>main:is_run_continue = true
+deactivate engine
+end
