@@ -1,0 +1,307 @@
+title 엔진(멀티)
+
+actor "main" as main
+
+participant ":Engine" as engine
+participant "board:Board" as board
+participant "renderer:IRenderer" as renderer
+participant "network:INetwork" as network
+participant ":Timer" as timer
+participant ":Lobby" as lobby
+participant ":GameRule" as rule
+participant "input_handler:IInputHandler" as inputhandler
+participant ":KeyMapper" as keymapper
+
+loop is_run_continue IS true
+main->engine:run(is_server)
+activate engine
+
+engine->board:has_active_mino
+activate board
+board-->>engine:is_mino_active
+deactivate board
+
+opt is_mino_active IS false
+
+engine->board: spawn_mino
+activate board
+board-->>engine: is_spawn_possible
+deactivate board
+
+opt is_spawn_possible IS false
+engine->rule:update_score
+activate rule
+rule-->>engine:attack
+deactivate rule
+
+engine->engine:is_game_over = 1
+engine->engine:is_win = 0
+
+alt is_server IS true
+engine->network:send_multi_udp(attack, is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(attack, is_game_over, is_win)
+end
+
+engine->lobby:get_my_id
+activate lobby
+lobby-->>engine:my_id
+deactivate lobby
+
+engine->engine:active_user.erase(my_id)
+engine->renderer:render_game_over
+
+engine-->>main:is_run_continue = false
+end
+
+engine->renderer:render_next_block
+engine->engine:is_tetromino_or_board_change = true
+
+end
+
+engine->timer:set_curr_time
+
+engine->timer:check_500ms_time
+activate timer
+timer-->>engine:is_over_500ms_time
+deactivate timer
+
+opt is_over_500ms_time IS true
+engine->rule:process(DROP)
+engine->renderer:render_level
+engine->renderer:render_timer
+engine->engine:is_tetromino_or_board_change = true
+end
+
+engine->inputhandler:scan
+activate inputhandler
+inputhandler-->>engine:key
+deactivate inputhandler
+
+engine->keymapper:map_key(key)
+activate keymapper
+keymapper-->>engine:action
+deactivate keymapper
+
+opt action NOT INVALID
+engine->rule:process(action)
+engine->renderer:render_next_block
+engine->engine:is_tetromino_or_board_change = true
+end
+
+engine->rule:update_score
+activate rule
+rule-->>engine:attack
+deactivate rule
+
+opt is_tetromino_or_board_change IS true
+engine->renderer:render_board
+engine->renderer:render_hold
+engine->engine:is_game_over = 0
+engine->engine:is_win = 0
+
+alt is_server IS true
+engine->network:send_multi_udp(attack, is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(attack, is_game_over, is_win)
+end
+end
+
+opt attack > 0
+engine->renderer:render_score
+end
+
+engine->network:recv_udp(recv_pkt)
+activate network
+network-->>engine:is_recv_udp
+deactivate network
+
+opt is_recv_udp IS true
+engine->renderer:render_other_board
+
+opt recv_pkt.is_game_over IS 1
+engine->renderer:render_other_game_over
+engine->engine:active_user.erase(recv_pkt.id)
+end
+
+opt active_user.size IS 1
+engine->renderer:render_win
+engine->rule:update_score
+activate rule
+rule-->>engine:attack
+deactivate rule
+
+engine->engine:is_game_over = 0
+engine->engine:is_win = 1
+
+alt is_server IS true
+engine->network:send_multi_udp(attack, is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(attack, is_game_over, is_win)
+end
+
+engine->lobby:get_my_id
+activate lobby
+lobby-->>engine:my_id
+deactivate lobby
+
+engine->engine:active_user.erase(my_id)
+engine-->>main:is_run_continue = false
+end
+
+opt is_server IS true
+engine->network:send_relay_udp(recv_pkt)
+end
+
+opt recv_pkt.deleted_line BIGGER THEN attack 
+engine->board:insert_line(recv_pkt.deleted_line - attack)
+activate board
+board-->>engine:is_line_fill_complete
+deactivate board
+
+opt is_line_fill_complete IS false
+engine->renderer:render_game_over
+
+engine->rule:update_score
+activate rule
+rule-->>engine:attack
+deactivate rule
+
+engine->engine:is_game_over = 1
+engine->engine:is_win = 0
+
+alt is_server IS true
+engine->network:send_multi_udp(attack, is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(attack, is_game_over, is_win)
+end
+
+engine->lobby:get_my_id
+activate lobby
+lobby-->>engine:my_id
+deactivate lobby
+
+engine->engine:active_user.erase(my_id)
+
+engine-->>main:is_run_continue = false
+
+end
+
+engine->renderer:render_board
+engine->renderer:render_hold
+
+end
+
+end
+
+engine-->>main:is_run_continue = true
+deactivate engine
+end
+
+loop is_stop_continue IS true
+main->engine:stop(is_server)
+activate engine
+
+alt active_user.size > 0
+
+engine->network:recv_udp(recv_pkt)
+activate network
+network-->>engine:is_recv_udp
+deactivate network
+
+opt is_recv_udp IS true
+
+opt is_server
+
+engine->network:send_relay_udp(recv_pkt)
+
+end
+
+engine->renderer:render_other_board
+
+opt recv_pkt.is_game_over IS 1
+
+engine->renderer:render_other_game_over
+engine->engine:active_user.erase(recv_pkt.id)
+
+end
+
+opt recv_pkt.is_win IS 1
+
+engine->renderer:render_other_win
+loop three_sec_over < 7
+
+engine->timer:set_curr_time
+
+engine->timer:check_500ms_time
+activate timer
+timer-->>engine:is_over_500ms_time
+deactivate timer
+
+opt is_over_500ms_time IS true
+
+alt is_server IS true
+engine->network:send_multi_udp(is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(is_game_over, is_win)
+end
+
+engine->engine:three_sec_over = three_sec_over  + 1
+
+end
+
+end
+
+engine-->>main:is_stop_continue = false
+
+end
+
+engine->timer:check_500ms_time
+activate timer
+timer-->>engine:is_over_500ms_time
+deactivate timer
+
+opt is_over_500ms_time IS true
+
+alt is_server IS true
+engine->network:send_multi_udp(is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(is_game_over, is_win)
+end
+
+end
+
+end
+
+engine-->>main:is_stop_continue = true
+
+else active_user.size <= 0
+
+loop three_sec_over < 7
+
+engine->timer:set_curr_time
+
+engine->timer:check_500ms_time
+activate timer
+timer-->>engine:is_over_500ms_time
+deactivate timer
+
+opt is_over_500ms_time IS true
+
+alt is_server IS true
+engine->network:send_multi_udp(is_game_over, is_win)
+else is_server IS false
+engine->network:send_udp(is_game_over, is_win)
+end
+
+engine->engine:three_sec_over = three_sec_over  + 1
+
+end
+
+end
+
+engine-->>main:is_stop_continue = false
+
+end
+deactivate engine
+end
